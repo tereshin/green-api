@@ -22,7 +22,7 @@ export default defineConfig({
             return 'react'
           }
 
-          if (/node_modules\/(@tanstack|zustand|zod)\//.test(id)) {
+          if (/node_modules\/(@tanstack|zustand|zod|react-router)\//.test(id)) {
             return 'vendor'
           }
 

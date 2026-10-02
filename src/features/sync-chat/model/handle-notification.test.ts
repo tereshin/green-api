@@ -37,6 +37,7 @@ describe('handleNotification', () => {
       phone: '79998887766',
       title: 'Василиса',
       avatar_url: null,
+      has_contact_info: false,
     })
     expect(targets.upsertMessages).toHaveBeenCalledWith([expect.objectContaining({ id: '100', direction: 'incoming' })])
   })

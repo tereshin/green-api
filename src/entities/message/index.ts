@@ -4,3 +4,6 @@ export { mapNotificationToMessage, mapStatusWebhookToStatus } from '@/entities/m
 export { mergeStatus } from '@/entities/message/model/message-status'
 export { useMessageStore } from '@/entities/message/model/useMessageStore'
 export type { IncomingMessage, Message, MessageStatus, OutgoingMessage } from '@/entities/message/model/types'
+export { MessageBubble } from '@/entities/message/ui/MessageBubble'
+export { MessageListSkeleton } from '@/entities/message/ui/MessageListSkeleton'
+export { MessageStatusIcon } from '@/entities/message/ui/MessageStatusIcon'

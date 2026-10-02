@@ -6,6 +6,8 @@ type MessageBase = {
   text: string
   /** Unix-время в миллисекундах. */
   timestamp: number
+  is_deleted: boolean
+  is_edited: boolean
 }
 
 export type IncomingMessage = MessageBase & { direction: 'incoming' }

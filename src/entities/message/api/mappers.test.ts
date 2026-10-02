@@ -36,6 +36,8 @@ describe('mapNotificationToMessage', () => {
       text: 'Привет',
       timestamp: 1763115112000,
       direction: 'incoming',
+      is_deleted: false,
+      is_edited: false,
     })
   })
 
@@ -66,7 +68,42 @@ describe('mapHistoryItemToMessage', () => {
         textMessage: 'text',
         statusMessage: 'read',
       }),
-    ).toEqual({ id: '1', chat_id: '5', text: 'text', timestamp: 10_000, direction: 'outgoing', status: 'read' })
+    ).toEqual({
+      id: '1',
+      chat_id: '5',
+      text: 'text',
+      timestamp: 10_000,
+      direction: 'outgoing',
+      status: 'read',
+      is_deleted: false,
+      is_edited: false,
+    })
+  })
+
+  it('keeps a deleted message and marks an edited one', () => {
+    expect(
+      mapHistoryItemToMessage({
+        type: 'incoming',
+        idMessage: '2',
+        timestamp: 11,
+        typeMessage: 'textMessage',
+        chatId: '5',
+        textMessage: 'secret',
+        isDeleted: true,
+        isEdited: true,
+      }),
+    ).toMatchObject({ text: 'secret', is_deleted: true, is_edited: true })
+
+    expect(
+      mapHistoryItemToMessage({
+        type: 'incoming',
+        idMessage: '3',
+        timestamp: 12,
+        typeMessage: 'textMessage',
+        chatId: '5',
+        isDeleted: true,
+      }),
+    ).toMatchObject({ text: '', is_deleted: true, is_edited: false })
   })
 
   it('skips non-text history items', () => {

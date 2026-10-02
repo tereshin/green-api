@@ -1,5 +1,7 @@
 import { Component, type ErrorInfo, type PropsWithChildren, type ReactNode } from 'react'
 
+import { AppErrorFallback } from '@/app/ui/AppErrorFallback'
+
 type ErrorBoundaryProps = PropsWithChildren<{
   fallback?: ReactNode
 }>
@@ -23,7 +25,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   render() {
     if (this.state.has_error) {
-      return this.props.fallback ?? <p role="alert">Something went wrong.</p>
+      return this.props.fallback ?? <AppErrorFallback />
     }
 
     return this.props.children

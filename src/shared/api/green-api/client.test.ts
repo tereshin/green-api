@@ -28,14 +28,14 @@ describe('greenApiClient', () => {
     fetch_mock.mockResolvedValueOnce(jsonResponse({ result: true })).mockResolvedValueOnce(jsonResponse(null))
 
     await greenApiClient.delete('deleteNotification', z.object({ result: z.boolean() }), { path_suffix: '42' })
-    await greenApiClient.get('receiveNotification', z.null(), { query: { receiveTimeout: '20' } })
+    await greenApiClient.get('receiveNotification', z.null(), { query: { receiveTimeout: '5' } })
 
     expect(fetch_mock.mock.calls[0]?.[0]).toBe(
       'https://api.test.local/waInstance4100000000/deleteNotification/secret-token/42',
     )
     expect(fetch_mock.mock.calls[0]?.[1]).toMatchObject({ method: 'DELETE', credentials: 'omit' })
     expect(fetch_mock.mock.calls[1]?.[0]).toBe(
-      'https://api.test.local/waInstance4100000000/receiveNotification/secret-token?receiveTimeout=20',
+      'https://api.test.local/waInstance4100000000/receiveNotification/secret-token?receiveTimeout=5',
     )
   })
 

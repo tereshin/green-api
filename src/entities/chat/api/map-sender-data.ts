@@ -25,5 +25,6 @@ export function mapSenderDataToChat(sender_data: GreenApiSenderData, direction: 
       nonEmpty(sender_data.chatName) ??
       (is_private_incoming ? (nonEmpty(sender_data.senderContactName) ?? nonEmpty(sender_data.senderName)) : null),
     avatar_url: null,
+    has_contact_info: false,
   }
 }

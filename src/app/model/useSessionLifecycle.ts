@@ -3,6 +3,8 @@ import { useEffect } from 'react'
 
 import { sessionEvents } from '@/shared/api'
 
+import { restoreInstance } from '@/features/connect-instance'
+
 import { resetSession } from '@/app/model/reset-session'
 
 export function useSessionLifecycle(): void {
@@ -18,4 +20,8 @@ export function useSessionLifecycle(): void {
       unsubscribe_disconnect()
     }
   }, [query_client])
+
+  useEffect(() => {
+    void restoreInstance()
+  }, [])
 }

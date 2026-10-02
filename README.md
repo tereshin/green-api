@@ -6,11 +6,11 @@ React 19 + TypeScript + Vite, менеджер пакетов — pnpm.
 
 ```bash
 cp .env.example .env.local   # заполнить переменные
-pnpm install
-pnpm dev                     # dev-сервер
-pnpm build                   # tsc -b && vite build
-pnpm lint                    # oxlint
-pnpm test                    # vitest
+npm install                 # устанавливаем зависимости
+npm dev                     # запускаем как dev-сервер
+npm build                   # tsc -b && vite build
+npm lint                    # oxlint
+npm test                    # vitest
 ```
 
 ## Деплой

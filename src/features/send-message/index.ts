@@ -5,3 +5,4 @@ export {
   type SendMessageInput,
   type SendMessageResult,
 } from '@/features/send-message/model/send-message'
+export { SendMessageForm } from '@/features/send-message/ui/SendMessageForm'

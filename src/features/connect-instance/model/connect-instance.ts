@@ -3,9 +3,10 @@ import { ApiError, instanceCredentials, sessionEvents, type InstanceCredentials 
 import {
   AUTHORIZED_STATE,
   checkReceivingSettings,
+  fetchAccountSettings,
   fetchInstanceSettings,
-  fetchInstanceState,
   useSessionStore,
+  type Account,
   type ReceivingIssue,
 } from '@/entities/session'
 
@@ -18,6 +19,7 @@ export type ConnectFailure =
   | { reason: 'instance_not_authorized'; state_instance: string }
   | { reason: 'session_changed' }
   | { reason: 'network' }
+  | { reason: 'rate_limited' }
   | { reason: 'request_failed'; status: number }
 
 export class ConnectInstanceError extends Error {
@@ -33,6 +35,26 @@ export class ConnectInstanceError extends Error {
 export type ConnectResult = {
   id_instance: string
   receiving_issues: ReceivingIssue[]
+  account: Account
+}
+
+export async function establishSession(
+  session_id: number,
+  signal?: AbortSignal,
+): Promise<{ receiving_issues: ReceivingIssue[]; account: Account }> {
+  const snapshot = await fetchAccountSettings(signal)
+
+  if (snapshot.state_instance !== AUTHORIZED_STATE) {
+    throw new ConnectInstanceError({ reason: 'instance_not_authorized', state_instance: snapshot.state_instance })
+  }
+
+  const receiving_issues = checkReceivingSettings(await fetchInstanceSettings(signal))
+
+  if (!instanceCredentials.isCurrentSession(session_id)) {
+    throw new ConnectInstanceError({ reason: 'session_changed' })
+  }
+
+  return { receiving_issues, account: snapshot.account }
 }
 
 function toConnectFailure(error: unknown): ConnectFailure {
@@ -41,6 +63,10 @@ function toConnectFailure(error: unknown): ConnectFailure {
   }
 
   if (error instanceof ApiError) {
+    if (error.status === 429) {
+      return { reason: 'rate_limited' }
+    }
+
     return INVALID_CREDENTIALS_STATUSES.has(error.status)
       ? { reason: 'invalid_credentials' }
       : { reason: 'request_failed', status: error.status }
@@ -68,19 +94,8 @@ export async function connectInstance(input: InstanceCredentials): Promise<Conne
   const session_id = instanceCredentials.getSessionId()
 
   try {
-    const state_instance = await fetchInstanceState()
-
-    if (state_instance !== AUTHORIZED_STATE) {
-      throw new ConnectInstanceError({ reason: 'instance_not_authorized', state_instance })
-    }
-
-    const receiving_issues = checkReceivingSettings(await fetchInstanceSettings())
-
-    if (!instanceCredentials.isCurrentSession(session_id)) {
-      throw new ConnectInstanceError({ reason: 'session_changed' })
-    }
-
-    const result = { id_instance: credentials.id_instance, receiving_issues }
+    const established = await establishSession(session_id)
+    const result = { id_instance: credentials.id_instance, ...established }
     useSessionStore.getState().authorize(result)
 
     return result

@@ -32,17 +32,22 @@ function readText(message_data: GreenApiMessageData): string | null {
   return message_data.textMessageData?.textMessage ?? message_data.extendedTextMessageData?.text ?? null
 }
 
-/** Нетекстовые сообщения не поддерживаются этапом и возвращают null. */
+/** Нетекстовые сообщения не поддерживаются этапом и возвращают null. Удалённые показываем без текста. */
 export function mapHistoryItemToMessage(dto: ChatHistoryItemDto): Message | null {
-  if (!TEXT_MESSAGE_TYPES.has(dto.typeMessage) || dto.textMessage === undefined) {
+  const is_deleted = dto.isDeleted === true
+  const is_edited = dto.isEdited === true
+
+  if (!is_deleted && (!TEXT_MESSAGE_TYPES.has(dto.typeMessage) || dto.textMessage === undefined)) {
     return null
   }
 
   const base = {
     id: dto.idMessage,
     chat_id: dto.chatId,
-    text: dto.textMessage,
+    text: dto.textMessage ?? '',
     timestamp: toMilliseconds(dto.timestamp),
+    is_deleted,
+    is_edited,
   }
 
   if (dto.type === 'outgoing') {
@@ -64,6 +69,8 @@ export function mapNotificationToMessage(notification: GreenApiMessageNotificati
     chat_id: notification.senderData.chatId,
     text,
     timestamp: toMilliseconds(notification.timestamp),
+    is_deleted: false,
+    is_edited: false,
   }
 
   if (notification.typeWebhook === 'incomingMessageReceived') {

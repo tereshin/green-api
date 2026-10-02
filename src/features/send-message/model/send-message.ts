@@ -54,6 +54,8 @@ export async function sendMessage({ chat_id, text }: SendMessageInput): Promise<
     direction: 'outgoing',
     timestamp: Date.now(),
     status: 'pending',
+    is_deleted: false,
+    is_edited: false,
   }
 
   useMessageStore.getState().upsertMessages([optimistic])

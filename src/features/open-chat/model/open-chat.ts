@@ -1,7 +1,7 @@
 import { ApiError, instanceCredentials, toPhoneChatId } from '@/shared/api'
 import { normalizePhone } from '@/shared/lib/phone'
 
-import { fetchContactInfo, useChatStore } from '@/entities/chat'
+import { fetchContactInfo, useChatStore, writeCachedContacts } from '@/entities/chat'
 import { fetchChatHistory, HISTORY_PAGE_SIZE, useMessageStore } from '@/entities/message'
 
 const CONTACT_NOT_FOUND_STATUSES = new Set([400, 404])
@@ -52,6 +52,7 @@ async function loadHistory(chat_id: string, session_id: number): Promise<boolean
     }
 
     useMessageStore.getState().upsertMessages(messages)
+    useMessageStore.getState().markHistoryLoaded(chat_id)
 
     return true
   } catch {
@@ -75,9 +76,16 @@ export async function openChat(phone_input: string): Promise<OpenChatResult> {
       throw new OpenChatError({ reason: 'session_changed' })
     }
 
+    const stored = { ...chat, has_contact_info: true }
     const chat_store = useChatStore.getState()
-    chat_store.upsertChat(chat)
-    chat_store.setActiveChat(chat.id)
+    chat_store.upsertChat(stored)
+    chat_store.setActiveChat(stored.id)
+
+    const account_id = instanceCredentials.getIdInstance()
+
+    if (account_id) {
+      await writeCachedContacts(account_id, [stored])
+    }
 
     return { chat_id: chat.id, is_history_loaded: await loadHistory(chat.id, session_id) }
   } catch (error) {

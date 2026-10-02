@@ -12,6 +12,8 @@ function outgoing(overrides: Partial<OutgoingMessage> = {}): OutgoingMessage {
     direction: 'outgoing',
     timestamp: 1000,
     status: 'pending',
+    is_deleted: false,
+    is_edited: false,
     ...overrides,
   }
 }
@@ -36,10 +38,12 @@ describe('useMessageStore', () => {
 
   it('keeps chat message ids sorted by timestamp without duplicates', () => {
     store().upsertMessages([
-      { id: 'b', chat_id: 'chat-1', text: 'b', direction: 'incoming', timestamp: 2000 },
-      { id: 'a', chat_id: 'chat-1', text: 'a', direction: 'incoming', timestamp: 1000 },
+      { id: 'b', chat_id: 'chat-1', text: 'b', direction: 'incoming', timestamp: 2000, is_deleted: false, is_edited: false },
+      { id: 'a', chat_id: 'chat-1', text: 'a', direction: 'incoming', timestamp: 1000, is_deleted: false, is_edited: false },
     ])
-    store().upsertMessages([{ id: 'a', chat_id: 'chat-1', text: 'a', direction: 'incoming', timestamp: 1000 }])
+    store().upsertMessages([
+      { id: 'a', chat_id: 'chat-1', text: 'a', direction: 'incoming', timestamp: 1000, is_deleted: false, is_edited: false },
+    ])
 
     expect(store().message_ids_by_chat_id['chat-1']).toEqual(['a', 'b'])
   })
@@ -86,5 +90,24 @@ describe('useMessageStore', () => {
     store().markFailed('temp-1')
 
     expect(store().message_by_id['temp-1']).toMatchObject({ status: 'failed' })
+  })
+
+  it('keeps a live message from counting as loaded history', () => {
+    store().upsertMessages([
+      { id: 'live', chat_id: 'chat-1', text: 'привет', direction: 'incoming', timestamp: 2000, is_deleted: false, is_edited: false },
+    ])
+
+    expect(store().history_loaded_chat_ids['chat-1']).toBeUndefined()
+
+    store().markHistoryLoaded('chat-1')
+    store().upsertMessages([
+      { id: 'live-2', chat_id: 'chat-1', text: 'ещё', direction: 'incoming', timestamp: 3000, is_deleted: false, is_edited: false },
+    ])
+
+    expect(store().history_loaded_chat_ids['chat-1']).toBe(true)
+
+    store().reset()
+
+    expect(store().history_loaded_chat_ids).toEqual({})
   })
 })

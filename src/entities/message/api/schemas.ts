@@ -14,6 +14,8 @@ export const chatHistoryItemSchema = z.looseObject({
   chatId: greenApiIdSchema,
   textMessage: z.string().optional(),
   statusMessage: z.string().optional(),
+  isDeleted: z.boolean().optional(),
+  isEdited: z.boolean().optional(),
 })
 
 export const chatHistorySchema = z.array(chatHistoryItemSchema)
