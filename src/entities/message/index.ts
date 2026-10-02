@@ -1,0 +1,6 @@
+export { HISTORY_PAGE_SIZE, MAX_MESSAGE_LENGTH } from '@/entities/message/config'
+export { fetchChatHistory, sendTextMessage } from '@/entities/message/api/message-api'
+export { mapNotificationToMessage, mapStatusWebhookToStatus } from '@/entities/message/api/mappers'
+export { mergeStatus } from '@/entities/message/model/message-status'
+export { useMessageStore } from '@/entities/message/model/useMessageStore'
+export type { IncomingMessage, Message, MessageStatus, OutgoingMessage } from '@/entities/message/model/types'

@@ -2,7 +2,7 @@ import { fileURLToPath, URL } from 'node:url'
 
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -22,9 +22,20 @@ export default defineConfig({
             return 'react'
           }
 
+          if (/node_modules\/(@tanstack|zustand|zod)\//.test(id)) {
+            return 'vendor'
+          }
+
           return undefined
         },
       },
+    },
+  },
+  test: {
+    environment: 'node',
+    include: ['src/**/*.test.ts'],
+    env: {
+      VITE_API_BASE_URL: 'https://api.test.local',
     },
   },
 })

@@ -1,6 +1,6 @@
 import { Button } from '@heroui/react'
 
-import { AppProviders } from '@/app/providers'
+import { AppProviders } from '@/app/providers/AppProviders'
 
 export function App() {
   return (

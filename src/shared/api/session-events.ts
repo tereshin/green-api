@@ -1,9 +1,13 @@
-type SessionEvent = 'expired'
+/**
+ * expired — сервер отверг credentials (401) или инстанс разлогинен.
+ * disconnect_requested — пользователь попросил отключить инстанс.
+ */
+type SessionEvent = 'expired' | 'disconnect_requested'
 type Listener = () => void
 
 /**
  * Минимальная шина событий сессии. `shared` не знает о роутере и сторах,
- * поэтому реакция на 'expired' (редирект, сброс кэша) подписывается в `app/`.
+ * поэтому реакция на события (сброс сторов и кэша) подписывается в `app/`.
  */
 function createSessionEvents() {
   const listeners_by_event = new Map<SessionEvent, Set<Listener>>()

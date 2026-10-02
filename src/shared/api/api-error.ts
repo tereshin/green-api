@@ -1,3 +1,17 @@
+const SENSITIVE_PAYLOAD_KEYS = new Set(['path'])
+
+/**
+ * GREEN-API возвращает в теле ошибки `path` с apiTokenInstance внутри.
+ * Payload ошибки попадает в стейт, логи и мониторинг, поэтому такие поля вырезаются.
+ */
+export function scrubSensitive(payload: unknown): unknown {
+  if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
+    return payload
+  }
+
+  return Object.fromEntries(Object.entries(payload).filter(([key]) => !SENSITIVE_PAYLOAD_KEYS.has(key)))
+}
+
 export class ApiError extends Error {
   readonly status: number
   readonly payload: unknown
@@ -13,7 +27,7 @@ export class ApiError extends Error {
     let payload: unknown = null
 
     try {
-      payload = await response.json()
+      payload = scrubSensitive(await response.json())
     } catch {
       // тело может быть пустым или не-JSON — это нормально
     }

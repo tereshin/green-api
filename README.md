@@ -10,6 +10,7 @@ pnpm install
 pnpm dev                     # dev-сервер
 pnpm build                   # tsc -b && vite build
 pnpm lint                    # oxlint
+pnpm test                    # vitest
 ```
 
 ## Деплой
