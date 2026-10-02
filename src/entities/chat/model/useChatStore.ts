@@ -35,7 +35,7 @@ export const useChatStore = create<ChatStore>()((set) => ({
 
       return {
         chat_by_id: { ...state.chat_by_id, [chat.id]: existing ? mergeChat(existing, chat) : chat },
-        chat_ids: existing ? state.chat_ids : [chat.id, ...state.chat_ids],
+        chat_ids: state.chat_ids.includes(chat.id) ? state.chat_ids : [chat.id, ...state.chat_ids],
       }
     }),
   upsertChats: (chats) =>

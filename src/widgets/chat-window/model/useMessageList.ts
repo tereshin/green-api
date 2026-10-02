@@ -19,7 +19,7 @@ export function useMessageList(chat_id: string) {
     getItemKey: (index) => message_ids[index]!,
     estimateSize: () => 72,
     overscan: 8,
-    paddingStart: 64,
+    paddingStart: 0,
     paddingEnd: 16,
     gap: 6,
     anchorTo: 'end',

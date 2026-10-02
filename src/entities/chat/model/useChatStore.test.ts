@@ -25,6 +25,16 @@ describe('useChatStore', () => {
     expect(store().chat_ids).toEqual(['newer', 'older'])
   })
 
+  it('keeps contact metadata out of the sidebar until a conversation is explicitly registered', () => {
+    const contact = chat({ id: '1', title: 'Cached', has_contact_info: true })
+    store().upsertContacts([contact])
+    expect(store().chat_ids).toEqual([])
+    expect(store().chat_by_id['1']).toEqual(contact)
+    store().upsertChat(contact)
+    store().upsertChat(contact)
+    expect(store().chat_ids).toEqual(['1'])
+  })
+
   it('appends a batch in API order and does not reverse it', () => {
     store().upsertChats([
       chat({ id: 'first', title: 'First' }),

@@ -26,23 +26,25 @@ export function MessageList({ chat_id }: MessageListProps) {
   }
 
   return (
-    <div ref={container_ref} onScroll={handleScroll} className="min-h-0 flex-1 overflow-y-auto [overflow-anchor:none]">
-      <div className="relative mx-auto w-full max-w-3xl" style={{ height: total_size + bottom_offset }}>
-        <div className="absolute inset-x-0 top-0 flex h-16 items-center justify-center px-3 text-sm">
-          {pagination.has_more ? (
-            <button type="button" disabled={pagination.is_loading} onClick={pagination.loadMore} className="text-muted disabled:opacity-50">
-              {pagination.is_loading ? 'Загрузка…' : pagination.is_error ? 'Не удалось загрузить историю. Повторить' : 'Загрузить более ранние сообщения'}
-            </button>
-          ) : <span className="text-muted">Начало диалога</span>}
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex h-10 shrink-0 items-center justify-center px-3 text-sm">
+        {pagination.has_more ? (
+          <button type="button" disabled={pagination.is_loading} onClick={pagination.loadMore} className="text-muted disabled:opacity-50">
+            {pagination.is_loading ? 'Загрузка…' : pagination.is_error ? 'Не удалось загрузить историю. Повторить' : 'Загрузить более ранние сообщения'}
+          </button>
+        ) : <span className="text-muted">Начало диалога</span>}
+      </div>
+      <div ref={container_ref} onScroll={handleScroll} className="min-h-0 flex-1 overflow-y-auto [overflow-anchor:none]">
+        <div className="relative mx-auto w-full max-w-3xl" style={{ height: total_size + bottom_offset }}>
+          <ol aria-label="Сообщения" aria-live="polite">
+            {virtualizer.getVirtualItems().map((item) => (
+              <li key={item.key} data-index={item.index} data-message-id={message_ids[item.index]} ref={virtualizer.measureElement}
+                className="absolute inset-x-0 top-0 px-3 sm:px-6" style={{ transform: `translateY(${item.start + bottom_offset}px)` }}>
+                <MessageListItem message_id={message_ids[item.index]!} />
+              </li>
+            ))}
+          </ol>
         </div>
-        <ol aria-label="Сообщения" aria-live="polite">
-          {virtualizer.getVirtualItems().map((item) => (
-            <li key={item.key} data-index={item.index} data-message-id={message_ids[item.index]} ref={virtualizer.measureElement}
-              className="absolute inset-x-0 top-0 px-3 sm:px-6" style={{ transform: `translateY(${item.start + bottom_offset}px)` }}>
-              <MessageListItem message_id={message_ids[item.index]!} />
-            </li>
-          ))}
-        </ol>
       </div>
     </div>
   )
