@@ -1,0 +1,14 @@
+@import 'tailwindcss';
+@import '@heroui/styles';
+
+@layer base {
+  html {
+    color-scheme: light dark;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    min-height: 100dvh;
+  }
+}

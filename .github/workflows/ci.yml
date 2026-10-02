@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Lint and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck and build
+        run: pnpm build
+        env:
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL || 'http://localhost:8000/api' }}
+
+  deploy:
+    name: Deploy
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure deploy directory
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          command_timeout: 2m
+          script: mkdir -p "${{ secrets.SSH_PATH }}"
+
+      - name: Upload sources
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          command_timeout: 10m
+          overwrite: true
+          source: "Dockerfile,docker-compose.yml,.dockerignore,nginx,package.json,pnpm-lock.yaml,index.html,tsconfig.json,tsconfig.app.json,tsconfig.node.json,vite.config.ts,.oxlintrc.json,src,public"
+          target: ${{ secrets.SSH_PATH }}
+
+      - name: Build and restart container
+        uses: appleboy/ssh-action@v1
+        env:
+          DEPLOY_PATH: ${{ secrets.SSH_PATH }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          command_timeout: 30m
+          envs: DEPLOY_PATH
+          script: |
+            set -eu
+            cd "$DEPLOY_PATH"
+            if [ ! -f .env ]; then
+              echo "Create $DEPLOY_PATH/.env with VITE_API_BASE_URL and PROXY_NETWORK before the first deploy."
+              exit 1
+            fi
+            docker compose up -d --build --remove-orphans
+            docker image prune -f
