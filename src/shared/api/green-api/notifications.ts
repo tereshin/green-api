@@ -34,9 +34,10 @@ export async function receiveNotification(
 }
 
 /** Возвращает false, если уведомление уже было удалено ранее. */
-export async function deleteNotification(receipt_id: number): Promise<boolean> {
+export async function deleteNotification(receipt_id: number, signal?: AbortSignal): Promise<boolean> {
   const response = await greenApiClient.delete('deleteNotification', deleteNotificationResponseSchema, {
     path_suffix: String(receipt_id),
+    signal,
   })
 
   return response.result

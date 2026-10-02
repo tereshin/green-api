@@ -97,17 +97,17 @@ describe('useMessageStore', () => {
       { id: 'live', chat_id: 'chat-1', text: 'привет', direction: 'incoming', timestamp: 2000, is_deleted: false, is_edited: false },
     ])
 
-    expect(store().history_loaded_chat_ids['chat-1']).toBeUndefined()
+    expect(store().history_by_chat_id['chat-1']).toBeUndefined()
 
-    store().markHistoryLoaded('chat-1')
+    store().setHistoryPage('chat-1', { requested_count: 50, received_count: 0, latest_timestamp: null, has_more: false })
     store().upsertMessages([
       { id: 'live-2', chat_id: 'chat-1', text: 'ещё', direction: 'incoming', timestamp: 3000, is_deleted: false, is_edited: false },
     ])
 
-    expect(store().history_loaded_chat_ids['chat-1']).toBe(true)
+    expect(store().history_by_chat_id['chat-1']).toBeDefined()
 
     store().reset()
 
-    expect(store().history_loaded_chat_ids).toEqual({})
+    expect(store().history_by_chat_id).toEqual({})
   })
 })

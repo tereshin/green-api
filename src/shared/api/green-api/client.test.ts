@@ -5,6 +5,7 @@ import { ApiError } from '@/shared/api/api-error'
 import { greenApiClient, MissingCredentialsError, ResponseValidationError } from '@/shared/api/green-api/client'
 import { instanceCredentials } from '@/shared/api/green-api/credentials'
 import { sessionEvents } from '@/shared/api/session-events'
+import { SessionChangedError } from '@/shared/api/green-api/session-context'
 
 const fetch_mock = vi.fn<typeof fetch>()
 
@@ -78,6 +79,36 @@ describe('greenApiClient', () => {
     expect(listener).toHaveBeenCalledOnce()
 
     unsubscribe()
+  })
+
+  it('cancels the old request and does not expire a new session on a late 401', async () => {
+    const listener = vi.fn()
+    const unsubscribe = sessionEvents.on('expired', listener)
+    let resolve_response!: (response: Response) => void
+    fetch_mock.mockImplementation(() => new Promise<Response>((resolve) => { resolve_response = resolve }))
+    const request = greenApiClient.get('getStateInstance', z.unknown())
+    const signal = fetch_mock.mock.calls[0]?.[1]?.signal
+
+    instanceCredentials.set({ id_instance: '2', api_token_instance: 'new-token' })
+    expect(signal?.aborted).toBe(true)
+    resolve_response(new Response('', { status: 401 }))
+
+    await expect(request).rejects.toBeInstanceOf(SessionChangedError)
+    expect(listener).not.toHaveBeenCalled()
+    expect(instanceCredentials.getIdInstance()).toBe('2')
+    unsubscribe()
+  })
+
+  it('rejects an old success response when the session changes while reading its body', async () => {
+    let resolve_body!: (body: string) => void
+    const response = jsonResponse({ stateInstance: 'authorized' })
+    const read = vi.spyOn(response, 'text').mockImplementation(() => new Promise<string>((resolve) => { resolve_body = resolve }))
+    fetch_mock.mockResolvedValue(response)
+    const request = greenApiClient.get('getStateInstance', z.unknown())
+    await vi.waitFor(() => expect(read).toHaveBeenCalledOnce())
+    instanceCredentials.clear()
+    resolve_body('{"stateInstance":"authorized"}')
+    await expect(request).rejects.toBeInstanceOf(SessionChangedError)
   })
 
   it('rejects responses that do not match the schema', async () => {

@@ -58,4 +58,10 @@ describe('markChatRead', () => {
     await expect(Promise.all([first, second])).resolves.toEqual([true, true])
     expect(fetch_mock).toHaveBeenCalledTimes(1)
   })
+
+  it('deduplicates the same chat even with another chat request in between', async () => {
+    fetch_mock.mockImplementation(async () => jsonResponse({ setRead: true }))
+    await expect(Promise.all([markChatRead('100'), markChatRead('200'), markChatRead('100')])).resolves.toEqual([true, true, true])
+    expect(fetch_mock).toHaveBeenCalledTimes(2)
+  })
 })

@@ -7,7 +7,7 @@ import {
   type HandleResult,
   type NotificationPollerDeps,
   type ReceivedNotification,
-} from '@/features/sync-chat/lib/create-notification-poller'
+} from '@/shared/lib/async/create-notification-poller'
 
 type Step = ReceivedNotification<string> | null | Error
 
@@ -31,7 +31,7 @@ function setup(steps: Step[], overrides: Partial<NotificationPollerDeps<string>>
 
     return step
   })
-  const ack = vi.fn(async () => true)
+  const ack = vi.fn<NotificationPollerDeps<string>['ack']>(async () => true)
   const handle = vi.fn((): HandleResult => ({ status: 'handled' }))
   const sleep = vi.fn(async (_ms: number, _signal: AbortSignal) => {})
   const onDropped = vi.fn()
@@ -61,7 +61,7 @@ describe('createNotificationPoller', () => {
 
     await run()
 
-    expect(ack.mock.calls).toEqual([[1], [2]])
+    expect(ack.mock.calls.map(([id]) => id)).toEqual([1, 2])
   })
 
   it('does not ack when handling throws, and retries the redelivered notification', async () => {
@@ -76,7 +76,7 @@ describe('createNotificationPoller', () => {
     await run()
 
     expect(handle).toHaveBeenCalledTimes(2)
-    expect(ack.mock.calls).toEqual([[1]])
+    expect(ack.mock.calls.map(([id]) => id)).toEqual([1])
     expect(sleep).toHaveBeenCalledOnce()
   })
 
@@ -90,7 +90,7 @@ describe('createNotificationPoller', () => {
 
     expect(handle).toHaveBeenCalledTimes(3)
     expect(onDropped).toHaveBeenCalledWith(7)
-    expect(ack.mock.calls).toEqual([[7]])
+    expect(ack.mock.calls.map(([id]) => id)).toEqual([7])
   })
 
   it('runs after_ack only after a successful ack', async () => {
@@ -126,7 +126,9 @@ describe('createNotificationPoller', () => {
   })
 
   it('stops on 401 without retrying', async () => {
-    const { run, receive, sleep } = setup([new ApiError(401, 'Unauthorized'), null])
+    const { run, receive, sleep } = setup([new ApiError(401, 'Unauthorized'), null], {
+      isFatalError: (error) => error instanceof ApiError && error.status === 401,
+    })
 
     await run()
 
@@ -147,5 +149,28 @@ describe('createNotificationPoller', () => {
 
     expect(handle).not.toHaveBeenCalled()
     expect(ack).not.toHaveBeenCalled()
+  })
+
+  it('does not ack or run session effects when cancelled during handling', async () => {
+    const after_ack = vi.fn()
+    const setup_result = setup([notification(1)], {
+      handle: async () => {
+        setup_result.controller.abort()
+        return { status: 'handled', after_ack }
+      },
+    })
+    await setup_result.run()
+    expect(setup_result.ack).not.toHaveBeenCalled()
+    expect(after_ack).not.toHaveBeenCalled()
+  })
+
+  it('does not run after_ack when the session ends during acknowledgment', async () => {
+    const after_ack = vi.fn()
+    const setup_result = setup([notification(1)], {
+      handle: () => ({ status: 'handled', after_ack }),
+      ack: async () => { setup_result.controller.abort() },
+    })
+    await setup_result.run()
+    expect(after_ack).not.toHaveBeenCalled()
   })
 })

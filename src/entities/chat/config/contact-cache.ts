@@ -1,0 +1,4 @@
+export const CONTACT_CACHE_VERSION = 3
+export const CONTACT_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1_000
+export const MAX_CACHED_CONTACTS = 50
+export const CONTACT_CACHE_FLUSH_INTERVAL_MS = 2_000

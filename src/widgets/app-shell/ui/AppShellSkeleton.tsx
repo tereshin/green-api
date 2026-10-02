@@ -26,7 +26,7 @@ export function AppShellSkeleton() {
         </div>
       }
       content={
-        <div className="flex min-h-0 flex-1 flex-col justify-end">
+        <div className="flex min-h-0 flex-1 flex-col justify-end max-w-3xl mx-auto w-full">
           <MessageListSkeleton />
         </div>
       }

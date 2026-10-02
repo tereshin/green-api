@@ -1,8 +1,8 @@
 # Тестовый веб-интерфейс GREEN-API Telegram
 
-React 19 + TypeScript + Vite, менеджер пакетов — pnpm.
+React 19 + TypeScript + Vite, менеджер пакетов — npm.
 
-## Запуск
+## Запуск в терминале
 
 ```bash
 cp .env.example .env.local   # заполнить переменные

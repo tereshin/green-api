@@ -1,38 +1,19 @@
-import { useRef } from 'react'
-
 import { EmptyState } from '@/shared/ui/empty-state'
 import { ChatIcon } from '@/shared/ui/icons'
 
-import { MessageBubble, MessageListSkeleton, useMessageStore } from '@/entities/message'
-
-import { useIsOpeningChat } from '@/features/open-chat'
-
-import { useAutoScroll } from '@/widgets/chat-window/model/useAutoScroll'
-
-const EMPTY_IDS: string[] = []
+import { useMessageList } from '@/widgets/chat-window/model/useMessageList'
+import { MessageListItem } from '@/widgets/chat-window/ui/MessageListItem'
 
 type MessageListProps = {
   chat_id: string
 }
 
 export function MessageList({ chat_id }: MessageListProps) {
-  const container_ref = useRef<HTMLDivElement>(null)
-  const message_ids = useMessageStore((state) => state.message_ids_by_chat_id[chat_id] ?? EMPTY_IDS)
-  const message_by_id = useMessageStore((state) => state.message_by_id)
-  const is_opening = useIsOpeningChat()
+  const { container_ref, message_ids, virtualizer, pagination, handleScroll } = useMessageList(chat_id)
+  const total_size = virtualizer.getTotalSize()
+  const bottom_offset = Math.max(0, (virtualizer.scrollRect?.height ?? 0) - total_size)
 
-  const last_message = message_by_id[message_ids.at(-1) ?? '']
-  const { handleScroll } = useAutoScroll(container_ref, last_message?.id ?? null, last_message?.direction === 'outgoing')
-
-  if (message_ids.length === 0) {
-    if (is_opening) {
-      return (
-        <div role="status" aria-label="Загружаем историю" className="flex min-h-0 flex-1 flex-col justify-end">
-          <MessageListSkeleton />
-        </div>
-      )
-    }
-
+  if (message_ids.length === 0 && !pagination.has_more) {
     return (
       <EmptyState className="flex-1">
         <EmptyState.Icon>
@@ -45,18 +26,24 @@ export function MessageList({ chat_id }: MessageListProps) {
   }
 
   return (
-    <div ref={container_ref} onScroll={handleScroll} className="min-h-0 flex-1 overflow-y-auto">
-      <ol aria-live="polite" className="mx-auto flex min-h-full w-full max-w-3xl flex-col justify-end gap-1.5 px-3 py-4 sm:px-6">
-        {message_ids.map((message_id) => {
-          const message = message_by_id[message_id]
-
-          return message ? (
-            <li key={message_id}>
-              <MessageBubble message={message} />
+    <div ref={container_ref} onScroll={handleScroll} className="min-h-0 flex-1 overflow-y-auto [overflow-anchor:none]">
+      <div className="relative mx-auto w-full max-w-3xl" style={{ height: total_size + bottom_offset }}>
+        <div className="absolute inset-x-0 top-0 flex h-16 items-center justify-center px-3 text-sm">
+          {pagination.has_more ? (
+            <button type="button" disabled={pagination.is_loading} onClick={pagination.loadMore} className="text-muted disabled:opacity-50">
+              {pagination.is_loading ? 'Загрузка…' : pagination.is_error ? 'Не удалось загрузить историю. Повторить' : 'Загрузить более ранние сообщения'}
+            </button>
+          ) : <span className="text-muted">Начало диалога</span>}
+        </div>
+        <ol aria-label="Сообщения" aria-live="polite">
+          {virtualizer.getVirtualItems().map((item) => (
+            <li key={item.key} data-index={item.index} data-message-id={message_ids[item.index]} ref={virtualizer.measureElement}
+              className="absolute inset-x-0 top-0 px-3 sm:px-6" style={{ transform: `translateY(${item.start + bottom_offset}px)` }}>
+              <MessageListItem message_id={message_ids[item.index]!} />
             </li>
-          ) : null
-        })}
-      </ol>
+          ))}
+        </ol>
+      </div>
     </div>
   )
 }

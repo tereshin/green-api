@@ -1,5 +1,3 @@
-import { ApiError, MissingCredentialsError } from '@/shared/api'
-
 /**
  * handled/skipped подтверждаются (ack). after_ack — эффект, который нельзя выполнять до
  * подтверждения: например, завершение сессии, иначе уведомление вернётся при следующем входе.
@@ -13,19 +11,15 @@ export type ReceivedNotification<TBody> = {
 
 export type NotificationPollerDeps<TBody> = {
   receive: (signal: AbortSignal) => Promise<ReceivedNotification<TBody> | null>
-  ack: (receipt_id: number) => Promise<unknown>
+  ack: (receipt_id: number, signal: AbortSignal) => Promise<unknown>
   handle: (body: TBody) => HandleResult | Promise<HandleResult>
   sleep: (ms: number, signal: AbortSignal) => Promise<void>
   random?: () => number
   onDropped?: (receipt_id: number) => void
+  isFatalError?: (error: unknown) => boolean
   backoff_base_ms: number
   backoff_max_ms: number
   max_handle_attempts: number
-}
-
-/** Ошибки, после которых повторять бессмысленно: сессия недействительна, её сбросит sessionEvents. */
-function isFatalError(error: unknown): boolean {
-  return error instanceof MissingCredentialsError || (error instanceof ApiError && error.status === 401)
 }
 
 /**
@@ -46,7 +40,7 @@ export function createNotificationPoller<TBody>(deps: NotificationPollerDeps<TBo
     return Math.round(exponential * (0.5 + random() * 0.5))
   }
 
-  async function processNotification({ receipt_id, body }: ReceivedNotification<TBody>): Promise<void> {
+  async function processNotification({ receipt_id, body }: ReceivedNotification<TBody>, signal: AbortSignal): Promise<void> {
     let result: HandleResult | null = null
 
     try {
@@ -62,10 +56,11 @@ export function createNotificationPoller<TBody>(deps: NotificationPollerDeps<TBo
       deps.onDropped?.(receipt_id)
     }
 
-    await deps.ack(receipt_id)
+    if (signal.aborted) return
+    await deps.ack(receipt_id, signal)
     attempts_by_receipt_id.delete(receipt_id)
 
-    if (result?.status === 'handled') {
+    if (!signal.aborted && result?.status === 'handled') {
       result.after_ack?.()
     }
   }
@@ -84,12 +79,12 @@ export function createNotificationPoller<TBody>(deps: NotificationPollerDeps<TBo
           }
 
           if (notification) {
-            await processNotification(notification)
+            await processNotification(notification, signal)
           }
 
           consecutive_failures = 0
         } catch (error) {
-          if (signal.aborted || isFatalError(error)) {
+          if (signal.aborted || deps.isFatalError?.(error)) {
             return
           }
 

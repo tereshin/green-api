@@ -13,7 +13,7 @@ export default function ChatPage() {
   const { chat_id: route_chat_id } = useParams()
   const chat_id = route_chat_id ?? null
   const navigate = useNavigate()
-  const { is_loading, is_missing } = useRoutedChat(chat_id)
+  const { is_loading, is_missing, load_error, retry } = useRoutedChat(chat_id)
 
   const handleSelectChat = (next_chat_id: string) => {
     navigate(chatPath(next_chat_id))
@@ -29,6 +29,8 @@ export default function ChatPage() {
           chat_id={chat_id}
           is_loading={is_loading}
           is_missing={is_missing}
+          load_error={load_error}
+          onRetry={retry}
           onBack={() => navigate(CHATS_PATH)}
         />
       }

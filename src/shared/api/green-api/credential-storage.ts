@@ -1,4 +1,4 @@
-import type { InstanceCredentials } from '@/shared/api/green-api/credentials'
+import type { InstanceCredentials } from '@/shared/api/green-api/types'
 
 /**
  * Сессия этого клиента — пара idInstance/apiTokenInstance, а BFF нет.

@@ -1,4 +1,4 @@
-import { ApiError, instanceCredentials, sessionEvents, type InstanceCredentials } from '@/shared/api'
+import { ApiError, instanceCredentials, sessionEvents, SessionChangedError, type InstanceCredentials } from '@/shared/api'
 
 import {
   AUTHORIZED_STATE,
@@ -44,6 +44,10 @@ export async function establishSession(
 ): Promise<{ receiving_issues: ReceivingIssue[]; account: Account }> {
   const snapshot = await fetchAccountSettings(signal)
 
+  if (!instanceCredentials.isCurrentSession(session_id)) {
+    throw new ConnectInstanceError({ reason: 'session_changed' })
+  }
+
   if (snapshot.state_instance !== AUTHORIZED_STATE) {
     throw new ConnectInstanceError({ reason: 'instance_not_authorized', state_instance: snapshot.state_instance })
   }
@@ -60,6 +64,10 @@ export async function establishSession(
 function toConnectFailure(error: unknown): ConnectFailure {
   if (error instanceof ConnectInstanceError) {
     return error.failure
+  }
+
+  if (error instanceof SessionChangedError || (error instanceof DOMException && error.name === 'AbortError')) {
+    return { reason: 'session_changed' }
   }
 
   if (error instanceof ApiError) {

@@ -50,32 +50,23 @@ export async function fetchChats(signal?: AbortSignal): Promise<Chat[]> {
   return response.map(mapChatListItem)
 }
 
-type ReadChatTask = {
-  chat_id: string
-  session_id: number
-  promise: Promise<boolean>
-}
-
-let read_chat_task: ReadChatTask | null = null
+const read_chat_tasks = new Map<string, Promise<boolean>>()
 
 /** Отмечает входящие чата прочитанными. Повторный вызов того же чата ждёт уже идущий запрос. */
 export function markChatRead(chat_id: string): Promise<boolean> {
   const session_id = instanceCredentials.getSessionId()
-
-  if (read_chat_task?.chat_id === chat_id && read_chat_task.session_id === session_id) {
-    return read_chat_task.promise
-  }
+  const key = `${session_id}:${chat_id}`
+  const pending = read_chat_tasks.get(key)
+  if (pending) return pending
 
   const promise = greenApiClient
     .post('readChat', { chatId: chat_id }, readChatResponseSchema)
     .then((response) => response.setRead)
     .finally(() => {
-      if (read_chat_task?.promise === promise) {
-        read_chat_task = null
-      }
+      read_chat_tasks.delete(key)
     })
 
-  read_chat_task = { chat_id, session_id, promise }
+  read_chat_tasks.set(key, promise)
 
   return promise
 }

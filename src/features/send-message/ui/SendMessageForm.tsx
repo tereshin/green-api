@@ -4,7 +4,7 @@ import { useRef } from 'react'
 import { SendIcon } from '@/shared/ui/icons'
 
 import { useSendMessageForm } from '@/features/send-message/model/useSendMessageForm'
-import { useTextareaAutosize } from '@/features/send-message/model/useTextareaAutosize'
+import { useTextareaAutosize } from '@/shared/lib/dom'
 
 const MAX_VISIBLE_ROWS = 6
 

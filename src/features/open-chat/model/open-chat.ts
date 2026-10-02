@@ -1,8 +1,7 @@
-import { ApiError, instanceCredentials, toPhoneChatId } from '@/shared/api'
+import { ApiError, captureSession, SessionChangedError, toPhoneChatId } from '@/shared/api'
 import { normalizePhone } from '@/shared/lib/phone'
 
-import { fetchContactInfo, useChatStore, writeCachedContacts } from '@/entities/chat'
-import { fetchChatHistory, HISTORY_PAGE_SIZE, useMessageStore } from '@/entities/message'
+import { ensureContact, useChatStore } from '@/entities/chat'
 
 const CONTACT_NOT_FOUND_STATUSES = new Set([400, 404])
 
@@ -25,12 +24,15 @@ export class OpenChatError extends Error {
 
 export type OpenChatResult = {
   chat_id: string
-  is_history_loaded: boolean
 }
 
 function toOpenChatFailure(error: unknown): OpenChatFailure {
   if (error instanceof OpenChatError) {
     return error.failure
+  }
+
+  if (error instanceof SessionChangedError || (error instanceof DOMException && error.name === 'AbortError')) {
+    return { reason: 'session_changed' }
   }
 
   if (error instanceof ApiError) {
@@ -42,24 +44,6 @@ function toOpenChatFailure(error: unknown): OpenChatFailure {
   return error instanceof TypeError ? { reason: 'network' } : { reason: 'request_failed', status: 0 }
 }
 
-/** История — best effort: её ошибка не мешает открыть чат. */
-async function loadHistory(chat_id: string, session_id: number): Promise<boolean> {
-  try {
-    const messages = await fetchChatHistory(chat_id, HISTORY_PAGE_SIZE)
-
-    if (!instanceCredentials.isCurrentSession(session_id)) {
-      return false
-    }
-
-    useMessageStore.getState().upsertMessages(messages)
-    useMessageStore.getState().markHistoryLoaded(chat_id)
-
-    return true
-  } catch {
-    return false
-  }
-}
-
 export async function openChat(phone_input: string): Promise<OpenChatResult> {
   const phone = normalizePhone(phone_input)
 
@@ -67,27 +51,14 @@ export async function openChat(phone_input: string): Promise<OpenChatResult> {
     throw new OpenChatError({ reason: 'invalid_phone' })
   }
 
-  const session_id = instanceCredentials.getSessionId()
-
+  const session = captureSession()
   try {
-    const chat = await fetchContactInfo(toPhoneChatId(phone), phone)
-
-    if (!instanceCredentials.isCurrentSession(session_id)) {
-      throw new OpenChatError({ reason: 'session_changed' })
-    }
-
-    const stored = { ...chat, has_contact_info: true }
-    const chat_store = useChatStore.getState()
-    chat_store.upsertChat(stored)
-    chat_store.setActiveChat(stored.id)
-
-    const account_id = instanceCredentials.getIdInstance()
-
-    if (account_id) {
-      await writeCachedContacts(account_id, [stored])
-    }
-
-    return { chat_id: chat.id, is_history_loaded: await loadHistory(chat.id, session_id) }
+    const chat = await ensureContact(toPhoneChatId(phone), phone)
+    session.assertCurrent()
+    // Только явное создание переписки пользователем может открыть новый диалог.
+    useChatStore.getState().upsertChat(chat)
+    // История загружается при переходе на маршрут; ошибка доступна для повтора в окне чата.
+    return { chat_id: chat.id }
   } catch (error) {
     throw new OpenChatError(toOpenChatFailure(error))
   }

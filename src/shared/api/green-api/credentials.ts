@@ -1,12 +1,18 @@
 import { clearStoredCredentials, persistCredentials, readStoredCredentials } from '@/shared/api/green-api/credential-storage'
 
-export type InstanceCredentials = {
-  id_instance: string
-  api_token_instance: string
-}
+import type { InstanceCredentials } from '@/shared/api/green-api/types'
+
+export type { InstanceCredentials } from '@/shared/api/green-api/types'
 
 let current_credentials: InstanceCredentials | null = null
 let session_id = 0
+let session_controller = new AbortController()
+
+function advanceSession(): void {
+  session_controller.abort()
+  session_controller = new AbortController()
+  session_id += 1
+}
 
 /**
  * Только для client.ts: не реэкспортируется из index.ts, чтобы токен
@@ -25,7 +31,7 @@ export function hydrateInstanceCredentials(): void {
   }
 
   current_credentials = stored
-  session_id += 1
+  advanceSession()
 }
 
 /**
@@ -40,17 +46,18 @@ export function hydrateInstanceCredentials(): void {
 export const instanceCredentials = {
   set(credentials: InstanceCredentials): void {
     current_credentials = { ...credentials }
-    session_id += 1
+    advanceSession()
     persistCredentials(current_credentials)
   },
   clear(): void {
     current_credentials = null
-    session_id += 1
+    advanceSession()
     clearStoredCredentials()
   },
   hasCredentials: (): boolean => current_credentials !== null,
   getIdInstance: (): string | null => current_credentials?.id_instance ?? null,
   getSessionId: (): number => session_id,
+  getSignal: (): AbortSignal => session_controller.signal,
   isCurrentSession: (expected_session_id: number): boolean => expected_session_id === session_id,
 }
 

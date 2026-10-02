@@ -15,3 +15,10 @@ export type IncomingMessage = MessageBase & { direction: 'incoming' }
 export type OutgoingMessage = MessageBase & { direction: 'outgoing'; status: MessageStatus }
 
 export type Message = IncomingMessage | OutgoingMessage
+
+export type ChatHistoryState = {
+  requested_count: number
+  received_count: number
+  latest_timestamp: number | null
+  has_more: boolean
+}

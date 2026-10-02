@@ -5,18 +5,16 @@ import type { Chat } from '@/entities/chat/model/types'
 type ChatStore = {
   chat_by_id: Record<string, Chat>
   chat_ids: string[]
-  active_chat_id: string | null
   upsertChat: (chat: Chat) => void
   upsertChats: (chats: Chat[]) => void
-  setActiveChat: (chat_id: string | null) => void
+  upsertContacts: (contacts: Chat[]) => void
   reset: () => void
 }
 
 const INITIAL_STATE = {
   chat_by_id: {},
   chat_ids: [],
-  active_chat_id: null,
-} satisfies Pick<ChatStore, 'chat_by_id' | 'chat_ids' | 'active_chat_id'>
+} satisfies Pick<ChatStore, 'chat_by_id' | 'chat_ids'>
 
 /** Пустые поля нового снимка не затирают уже известные значения (уведомления беднее getContactInfo). */
 function mergeChat(existing: Chat, next: Chat): Chat {
@@ -58,6 +56,15 @@ export const useChatStore = create<ChatStore>()((set) => ({
 
       return { chat_by_id, chat_ids }
     }),
-  setActiveChat: (chat_id) => set({ active_chat_id: chat_id }),
+  // Контакт сам по себе не является диалогом и не должен попадать в сайдбар.
+  upsertContacts: (contacts) =>
+    set((state) => {
+      const chat_by_id = { ...state.chat_by_id }
+      for (const contact of contacts) {
+        const existing = chat_by_id[contact.id]
+        chat_by_id[contact.id] = existing ? mergeChat(existing, contact) : contact
+      }
+      return { chat_by_id }
+    }),
   reset: () => set(INITIAL_STATE),
 }))

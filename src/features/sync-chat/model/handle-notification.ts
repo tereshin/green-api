@@ -3,7 +3,7 @@ import type { GreenApiNotificationBody } from '@/shared/api'
 import { mapSenderDataToChat, type Chat } from '@/entities/chat'
 import { mapNotificationToMessage, mapStatusWebhookToStatus, type Message, type MessageStatus } from '@/entities/message'
 
-import type { HandleResult } from '@/features/sync-chat/lib/create-notification-poller'
+import type { HandleResult } from '@/shared/lib/async'
 
 export type NotificationTargets = {
   upsertChat: (chat: Chat) => void

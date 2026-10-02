@@ -3,6 +3,8 @@ export { deleteContactCache, readCachedContact, readCachedContacts, writeCachedC
 export { mapSenderDataToChat } from '@/entities/chat/api/map-sender-data'
 export { getChatDisplayName } from '@/entities/chat/lib/get-chat-display-name'
 export { useChatStore } from '@/entities/chat/model/useChatStore'
+export { ensureContact, hydrateContactCache } from '@/entities/chat/model/ensure-contact'
+export { ensureChats, hasChat } from '@/entities/chat/model/ensure-chats'
 export type { Chat } from '@/entities/chat/model/types'
 export { ChatAvatar } from '@/entities/chat/ui/ChatAvatar'
 export { ChatListItem } from '@/entities/chat/ui/ChatListItem'

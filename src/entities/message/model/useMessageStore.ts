@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 
 import { mergeStatus } from '@/entities/message/model/message-status'
-import type { Message, MessageStatus } from '@/entities/message/model/types'
+import type { ChatHistoryState, Message, MessageStatus } from '@/entities/message/model/types'
 
 /** Защита от неограниченного роста: статусы сообщений, которые так и не появились в сторе. */
 const MAX_EARLY_STATUSES = 100
@@ -11,8 +11,8 @@ type MessagesState = {
   message_ids_by_chat_id: Record<string, string[]>
   /** Статус пришёл раньше самого сообщения (outgoingMessageStatus до ответа sendMessage). */
   early_status_by_id: Record<string, MessageStatus>
-  /** getChatHistory уже запрашивали. Живое уведомление историю не заменяет. */
-  history_loaded_chat_ids: Record<string, true>
+  /** Состояние серверного окна истории. Live-сообщение не означает, что история загружена. */
+  history_by_chat_id: Record<string, ChatHistoryState>
 }
 
 type MessageStore = MessagesState & {
@@ -21,7 +21,7 @@ type MessageStore = MessagesState & {
   confirmMessage: (temp_id: string, server_message: Message) => void
   setStatus: (message_id: string, status: MessageStatus) => void
   markFailed: (message_id: string) => void
-  markHistoryLoaded: (chat_id: string) => void
+  setHistoryPage: (chat_id: string, history: ChatHistoryState) => void
   reset: () => void
 }
 
@@ -29,7 +29,7 @@ const INITIAL_STATE: MessagesState = {
   message_by_id: {},
   message_ids_by_chat_id: {},
   early_status_by_id: {},
-  history_loaded_chat_ids: {},
+  history_by_chat_id: {},
 }
 
 function mergeMessage(existing: Message | undefined, next: Message): Message {
@@ -110,7 +110,7 @@ function applyMessages(state: MessagesState, messages: Message[], removed_ids: s
       .sort(compareByTimestamp(message_by_id))
   }
 
-  return { message_by_id, message_ids_by_chat_id, early_status_by_id, history_loaded_chat_ids: state.history_loaded_chat_ids }
+  return { message_by_id, message_ids_by_chat_id, early_status_by_id, history_by_chat_id: state.history_by_chat_id }
 }
 
 export const useMessageStore = create<MessageStore>()((set) => ({
@@ -146,13 +146,9 @@ export const useMessageStore = create<MessageStore>()((set) => ({
 
       return { early_status_by_id }
     }),
-  markHistoryLoaded: (chat_id) =>
+  setHistoryPage: (chat_id, history) =>
     set((state) => {
-      if (state.history_loaded_chat_ids[chat_id]) {
-        return state
-      }
-
-      return { history_loaded_chat_ids: { ...state.history_loaded_chat_ids, [chat_id]: true } }
+      return { history_by_chat_id: { ...state.history_by_chat_id, [chat_id]: history } }
     }),
   markFailed: (message_id) =>
     set((state) => {

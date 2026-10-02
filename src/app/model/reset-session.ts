@@ -14,6 +14,9 @@ import { useSessionStore } from '@/entities/session'
 export function resetSession(query_client: QueryClient): void {
   const account_id = instanceCredentials.getIdInstance()
 
+  // Сначала закрываем сессию: никакой завершившийся запрос уже не имеет права менять данные.
+  instanceCredentials.clear()
+
   void query_client.cancelQueries()
   query_client.clear()
 
@@ -21,7 +24,6 @@ export function resetSession(query_client: QueryClient): void {
     void deleteContactCache(account_id)
   }
 
-  instanceCredentials.clear()
   useSessionStore.getState().reset()
   useChatStore.getState().reset()
   useMessageStore.getState().reset()

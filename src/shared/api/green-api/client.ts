@@ -4,6 +4,7 @@ import { env } from '@/shared/config/env'
 
 import { ApiError } from '@/shared/api/api-error'
 import { readCredentials, type InstanceCredentials } from '@/shared/api/green-api/credentials'
+import { captureSession } from '@/shared/api/green-api/session-context'
 import { sessionEvents } from '@/shared/api/session-events'
 
 type HttpMethod = 'GET' | 'POST' | 'DELETE'
@@ -53,17 +54,19 @@ async function request<TSchema extends z.ZodType>(
   schema: TSchema,
   options: RequestOptions & { body?: unknown } = {},
 ): Promise<z.infer<TSchema>> {
+  const session = captureSession(options.signal)
   const credentials = readCredentials()
 
   if (!credentials) {
     throw new MissingCredentialsError()
   }
 
-  const { body, signal } = options
+  session.assertCurrent()
+  const { body } = options
 
   const response = await fetch(buildUrl(method, credentials, options), {
     method: http_method,
-    signal,
+    signal: session.signal,
     // GREEN-API авторизует по токену в пути; cookies не нужны и ломают CORS с `*`.
     credentials: 'omit',
     headers: {
@@ -72,6 +75,9 @@ async function request<TSchema extends z.ZodType>(
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   })
+
+  // В том числе защищает от fetch-адаптеров, которые не соблюдают AbortSignal.
+  session.assertCurrent()
 
   if (response.status === 401) {
     sessionEvents.emit('expired')
@@ -82,6 +88,7 @@ async function request<TSchema extends z.ZodType>(
   }
 
   const parsed = schema.safeParse(await readJson(response))
+  session.assertCurrent()
 
   if (!parsed.success) {
     throw new ResponseValidationError(method, parsed.error.issues)

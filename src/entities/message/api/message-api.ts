@@ -12,7 +12,16 @@ export async function sendTextMessage(chat_id: string, text: string): Promise<st
 }
 
 export async function fetchChatHistory(chat_id: string, count: number, signal?: AbortSignal): Promise<Message[]> {
+  return (await fetchChatHistoryPage(chat_id, count, signal)).messages
+}
+
+/** count относится ко всем типам сообщений, а не только к поддерживаемому тексту. */
+export async function fetchChatHistoryPage(chat_id: string, count: number, signal?: AbortSignal) {
   const items = await greenApiClient.post('getChatHistory', { chatId: chat_id, count }, chatHistorySchema, { signal })
 
-  return items.map(mapHistoryItemToMessage).filter((message): message is Message => message !== null)
+  return {
+    messages: items.map(mapHistoryItemToMessage).filter((message): message is Message => message !== null),
+    received_count: items.length,
+    latest_timestamp: items.length > 0 ? items.reduce((latest, item) => Math.max(latest, item.timestamp * 1_000), 0) : null,
+  }
 }

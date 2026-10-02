@@ -1,9 +1,8 @@
 import { queryOptions, useQuery } from '@tanstack/react-query'
-import { useEffect } from 'react'
 
-import { instanceCredentials } from '@/shared/api'
+import { captureSession } from '@/shared/api'
 
-import { fetchChats, readCachedContacts, useChatStore } from '@/entities/chat'
+import { ensureChats, hydrateContactCache } from '@/entities/chat'
 import { useSessionStore } from '@/entities/session'
 
 import { enrichMissingContacts } from '@/features/load-chats/model/enrich-contacts'
@@ -11,24 +10,21 @@ import { enrichMissingContacts } from '@/features/load-chats/model/enrich-contac
 const CHATS_STALE_TIME_MS = 60_000
 
 /**
- * Опции загрузки списка чатов.
- * queryFn намеренно не читает `signal`: в StrictMode снятие наблюдателя
- * отменяет in-flight запрос, если signal прочитан. Отмена и немедленный повтор
- * дают 429, а retry уходит третьим запросом. Без signal Query продолжает тот же promise.
+ * Query хранит результат операции, а не вторую копию чатов.
+ * Signal наблюдателя не читается: StrictMode переиспользует текущий запрос.
+ * Смена сессии отменяет HTTP-запросы централизованно в shared/api.
  */
 export function chatsQueryOptions(id_instance: string) {
+  const session = captureSession()
   return queryOptions({
-    queryKey: ['chats', id_instance],
+    queryKey: ['load-chats', id_instance, session.session_id],
     staleTime: CHATS_STALE_TIME_MS,
     queryFn: async () => {
-      const session_id = instanceCredentials.getSessionId()
-      const chats = await fetchChats()
-
-      if (!instanceCredentials.isCurrentSession(session_id)) {
-        return []
-      }
-
-      return chats
+      session.assertCurrent()
+      await Promise.all([hydrateContactCache(), ensureChats()])
+      session.assertCurrent()
+      void enrichMissingContacts()
+      return true as const
     },
   })
 }
@@ -37,38 +33,8 @@ export function useLoadChats() {
   const id_instance = useSessionStore((state) =>
     state.session.status === 'authorized' ? state.session.id_instance : null,
   )
-  const upsertChats = useChatStore((state) => state.upsertChats)
-
-  const query = useQuery({
+  return useQuery({
     ...chatsQueryOptions(id_instance ?? ''),
     enabled: id_instance !== null,
   })
-
-  useEffect(() => {
-    if (!query.data || !id_instance) {
-      return
-    }
-
-    let is_cancelled = false
-    const session_id = instanceCredentials.getSessionId()
-
-    upsertChats(query.data)
-
-    void (async () => {
-      const cached = await readCachedContacts(id_instance)
-
-      if (is_cancelled || !instanceCredentials.isCurrentSession(session_id)) {
-        return
-      }
-
-      upsertChats(cached)
-      await enrichMissingContacts(session_id, id_instance)
-    })()
-
-    return () => {
-      is_cancelled = true
-    }
-  }, [id_instance, query.data, upsertChats])
-
-  return query
 }

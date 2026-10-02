@@ -1,4 +1,4 @@
-import { ApiError, instanceCredentials, MissingCredentialsError } from '@/shared/api'
+import { ApiError, instanceCredentials, MissingCredentialsError, sessionEvents } from '@/shared/api'
 
 import { useSessionStore, type RestoreFailureReason } from '@/entities/session'
 
@@ -6,7 +6,7 @@ import { ConnectInstanceError, establishSession } from '@/features/connect-insta
 
 const CREDENTIAL_REJECT_STATUSES = new Set([401, 403, 404])
 
-let restore_task: Promise<void> | null = null
+let restore_task: { session_id: number; promise: Promise<void> } | null = null
 
 function isAbortError(error: unknown): boolean {
   return error instanceof DOMException && error.name === 'AbortError'
@@ -84,8 +84,12 @@ async function restoreInstanceOnce(): Promise<void> {
     }
 
     if (error instanceof MissingCredentialsError || shouldForgetCredentials(error)) {
-      instanceCredentials.clear()
-      useSessionStore.getState().reset()
+      sessionEvents.emit('expired')
+      // Вне AppRuntime (например, в тестах) подписчика жизненного цикла может не быть.
+      if (instanceCredentials.isCurrentSession(session_id)) {
+        instanceCredentials.clear()
+        useSessionStore.getState().reset()
+      }
 
       return
     }
@@ -99,13 +103,15 @@ async function restoreInstanceOnce(): Promise<void> {
  * отмена первого getAccountSettings и немедленный повтор дают 429.
  */
 export function restoreInstance(): Promise<void> {
-  if (restore_task) {
-    return restore_task
+  const session_id = instanceCredentials.getSessionId()
+  if (restore_task?.session_id === session_id) {
+    return restore_task.promise
   }
 
-  restore_task = restoreInstanceOnce().finally(() => {
-    restore_task = null
+  const promise = restoreInstanceOnce().finally(() => {
+    if (restore_task?.promise === promise) restore_task = null
   })
 
-  return restore_task
+  restore_task = { session_id, promise }
+  return promise
 }
