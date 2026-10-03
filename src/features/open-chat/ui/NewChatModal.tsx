@@ -1,6 +1,8 @@
 import { Button, FieldError, Form, Input, Modal, TextField } from '@heroui/react'
 
+import { MAX_PHONE_INPUT_LENGTH } from '@/features/open-chat/lib/mask-phone-input'
 import { useNewChatForm } from '@/features/open-chat/model/useNewChatForm'
+import { usePhoneMask } from '@/features/open-chat/model/usePhoneMask'
 
 const FORM_ID = 'new-chat-form'
 
@@ -17,6 +19,7 @@ export function NewChatModal({ is_open, onOpenChange, onChatOpened }: NewChatMod
       onChatOpened(chat_id)
     },
   })
+  const phone_mask = usePhoneMask(phone, handlePhoneChange)
   const error_message = field_error ?? submit_error?.description ?? null
 
   const handleOpenChange = (next_is_open: boolean) => {
@@ -49,9 +52,16 @@ export function NewChatModal({ is_open, onOpenChange, onChatOpened }: NewChatMod
                 value={phone}
                 isInvalid={error_message !== null}
                 isDisabled={is_pending}
-                onChange={handlePhoneChange}
+                onChange={phone_mask.handleChange}
               >
-                <Input variant="secondary" placeholder="+7 937 999 48 33" />
+                <Input
+                  ref={phone_mask.input_ref}
+                  variant="secondary"
+                  placeholder="+7 937 999 48 33"
+                  maxLength={MAX_PHONE_INPUT_LENGTH}
+                  onPaste={phone_mask.handlePaste}
+                  onSelect={phone_mask.handleSelect}
+                />
                 {error_message ? <FieldError>{error_message}</FieldError> : null}
               </TextField>
             </Form>

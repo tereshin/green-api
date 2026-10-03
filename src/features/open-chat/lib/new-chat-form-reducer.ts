@@ -1,3 +1,4 @@
+import { maskPhoneInput } from '@/features/open-chat/lib/mask-phone-input'
 import { normalizePhone } from '@/shared/lib/phone'
 
 export type NewChatSubmitError = {
@@ -25,16 +26,6 @@ export const INITIAL_NEW_CHAT_FORM_STATE: NewChatFormState = {
   submit_error: null,
 }
 
-/** Один плюс в начале, цифры и пробелы. Разделители вставленного номера приводим к пробелам. */
-export function filterPhoneInput(value: string): string {
-  return value
-    .replace(/[()-]/g, ' ')
-    .replace(/[^\d+\s]/g, '')
-    .replace(/\s+/g, ' ')
-    .trimStart()
-    .replace(/\+/g, (plus, offset: number) => offset === 0 ? plus : '')
-}
-
 /** null — номер корректен. */
 export function validatePhone(value: string): string | null {
   if (value.trim().length === 0) {
@@ -52,7 +43,7 @@ export function isNewChatPhoneInvalid(state: NewChatFormState): boolean {
 export function newChatFormReducer(state: NewChatFormState, action: NewChatFormAction): NewChatFormState {
   switch (action.type) {
     case 'phone_changed':
-      return { phone: filterPhoneInput(action.value), field_error: null, submit_error: null }
+      return { phone: maskPhoneInput(action.value), field_error: null, submit_error: null }
     case 'validation_failed':
       return { ...state, field_error: action.message, submit_error: null }
     case 'submit_started':
