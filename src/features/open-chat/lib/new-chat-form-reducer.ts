@@ -25,9 +25,14 @@ export const INITIAL_NEW_CHAT_FORM_STATE: NewChatFormState = {
   submit_error: null,
 }
 
-/** В поле остаются только символы телефонного номера. */
+/** Один плюс в начале, цифры и пробелы. Разделители вставленного номера приводим к пробелам. */
 export function filterPhoneInput(value: string): string {
-  return value.replace(/[^\d+\s()-]/g, '')
+  return value
+    .replace(/[()-]/g, ' ')
+    .replace(/[^\d+\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trimStart()
+    .replace(/\+/g, (plus, offset: number) => offset === 0 ? plus : '')
 }
 
 /** null — номер корректен. */
@@ -36,7 +41,7 @@ export function validatePhone(value: string): string | null {
     return 'Введите номер телефона'
   }
 
-  return normalizePhone(value) ? null : 'Номер в международном формате: 10–15 цифр, например +7 900 123-45-67'
+  return normalizePhone(value) ? null : 'Введите международный номер: 10–15 цифр с кодом страны, например +7 937 999 48 33'
 }
 
 export function isNewChatPhoneInvalid(state: NewChatFormState): boolean {

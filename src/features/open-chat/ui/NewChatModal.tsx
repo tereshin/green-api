@@ -51,7 +51,7 @@ export function NewChatModal({ is_open, onOpenChange, onChatOpened }: NewChatMod
                 isDisabled={is_pending}
                 onChange={handlePhoneChange}
               >
-                <Input variant="secondary" placeholder="+7 900 123-45-67" />
+                <Input variant="secondary" placeholder="+7 937 999 48 33" />
                 {error_message ? <FieldError>{error_message}</FieldError> : null}
               </TextField>
             </Form>

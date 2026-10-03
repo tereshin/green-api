@@ -20,4 +20,19 @@ describe('normalizePhone', () => {
   it('does not rewrite national prefixes', () => {
     expect(normalizePhone('89991234567')).toBe('89991234567')
   })
+
+  it.each([
+    ['+7 937 999 48 33', '79379994833'],
+    ['+381 94 888 33 44', '381948883344'],
+  ])('normalizes %s', (input, expected) => {
+    expect(normalizePhone(input)).toBe(expected)
+  })
+
+  it.each([
+    '--0349320948-4092840-', '09379994833', '+0 937 999 48 33',
+    '++79379994833', '7+9379994833', '-79379994833', '79379994833-',
+    '+7--9379994833', '+7 (9379994833', '+7 9379994833)',
+  ])('rejects malformed phone %s before API calls', (input) => {
+    expect(normalizePhone(input)).toBeNull()
+  })
 })
