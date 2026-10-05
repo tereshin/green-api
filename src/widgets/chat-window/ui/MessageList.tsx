@@ -34,7 +34,7 @@ export function MessageList({ chat_id }: MessageListProps) {
           </button>
         )}
       </div>
-      <div ref={container_ref} onScroll={handleScroll} className="min-h-0 flex-1 overflow-y-auto [overflow-anchor:none]">
+      <div ref={container_ref} onScroll={handleScroll} className="min-h-0 flex-1 overflow-y-auto [overflow-anchor:none] pt-3">
         <div className="relative mx-auto w-full max-w-3xl" style={{ height: total_size + bottom_offset }}>
           <ol aria-label="Сообщения" aria-live="polite">
             {virtualizer.getVirtualItems().map((item) => (
